@@ -310,6 +310,14 @@ def _reason(role: str, score: dict[str, Any], profile: dict[str, Any]) -> str:
     return f"{group}方向在{'、'.join(labels)}上有较强对应，{ending}。"
 
 
+def _preview_markdown(style_id: str, preview_path: str | None) -> str | None:
+    """Return a directly renderable local Markdown image, not just a link."""
+    if not preview_path:
+        return None
+    normalized_path = str(preview_path).replace("\\", "/")
+    return f"![#{style_id} 示意图]({normalized_path})"
+
+
 def load_profiles(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload, list):
@@ -408,6 +416,10 @@ def route_topic(topic: str, profiles: list[dict[str, Any]], features: dict[str, 
                 "reference": profile.get("reference", ""),
                 "group": profile.get("group", ""),
                 "preview_path": profile.get("preview_path"),
+                "preview_markdown": _preview_markdown(
+                    str(profile.get("style_id", "")).zfill(3),
+                    profile.get("preview_path"),
+                ),
                 "reason": _reason(item["role"], score, profile),
                 "status": profile.get("status", "unknown"),
                 "scores": {
@@ -447,7 +459,8 @@ def main() -> int:
     else:
         for candidate in result["candidates"]:
             print(f"推荐{candidate['recommendation']}：{candidate['role']} · #{candidate['style_id']} {candidate['generation_name']}")
-            print(f"参考：{candidate['reference']}；示意图：{candidate['preview_path'] or '未同步'}")
+            print(f"参考：{candidate['reference']}")
+            print(f"示意图：{candidate['preview_markdown'] or '未同步'}")
             print(f"理由：{candidate['reason']}")
         for warning in result["warnings"]:
             print(f"提示：{warning}")

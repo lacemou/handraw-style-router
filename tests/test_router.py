@@ -14,7 +14,7 @@ from repair_style_assets import (  # noqa: E402
     KNOWN_ASSET_REPAIRS,
     _crop_contact_sheet,
 )
-from route_topic import infer_topic_features, route_topic  # noqa: E402
+from route_topic import _preview_markdown, infer_topic_features, route_topic  # noqa: E402
 from update_style_library import _merge_review_status  # noqa: E402
 
 
@@ -44,6 +44,11 @@ class RouterTest(unittest.TestCase):
         ])
         self.assertEqual(len({item["style_id"] for item in result["candidates"]}), 5)
         self.assertGreaterEqual(len({item["group"] for item in result["candidates"]}), 5)
+
+    def test_preview_output_is_a_renderable_markdown_image(self) -> None:
+        rendered = _preview_markdown("046", r"D:\work\previews\046.png")
+        self.assertEqual(rendered, "![#046 示意图](D:/work/previews/046.png)")
+        self.assertIsNone(_preview_markdown("046", None))
 
     def test_profile_builder_marks_heuristic_status(self) -> None:
         styles = [{
