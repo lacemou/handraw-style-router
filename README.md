@@ -31,7 +31,7 @@
 - 不保证生图模型一定复现某位参考作者的画面；
 - 不负责公众号、小红书或其他平台的发布。
 
-生图模型由宿主 Agent 的 ImageGen 能力决定，本项目不把内置生图模型版本写死。使用可显式指定模型的 API 或 CLI 时，应记录实际 model ID。WorkBuddy、豆包工作等其他 Agent 目前只能说“理论上可适配”，不能承诺相同的生图效果。
+本项目的生图验证范围为 OpenAI ImageGen 的 `gpt-image-2` / GPT-Image-2.5 系列（当前官方包含 Sunburst、Flare）；具体内置版本由当前运行环境决定，本项目不固定模型 ID。WorkBuddy、豆包工作等其他 Agent 的模型和生图效果目前只能说“理论上可适配”，不作相同效果保证。使用可显式指定模型的 API 或 CLI 时，应记录实际 model ID。
 
 ## 在 Codex 中使用
 
