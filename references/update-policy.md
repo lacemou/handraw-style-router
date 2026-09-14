@@ -8,7 +8,13 @@
 python scripts/update_style_library.py --with-images
 ```
 
-脚本会把上游 `styles.json`、单图示意图和抓取信息写入 `.runtime/style-library/`。这里的运行时目录不提交 Git，也不进入公开 Skill 包。
+脚本会把上游 `styles.json`、单图示意图和抓取信息写入 `.runtime/style-library/`。这里的运行时目录不提交 Git，也不进入公开 Skill 包。下载单图后，脚本还会应用 `scripts/repair_style_assets.py` 中已确认的本地修复规则，并把修复来源、切片位置和 SHA-256 写入 `source.json`；这不修改上游仓库。
+
+如果本地已经同步过示意图，只需重新应用已知修复，不必重新下载全部图片：
+
+```bash
+python scripts/update_style_library.py --repair-assets
+```
 
 ## 后续更新
 
@@ -25,4 +31,3 @@ python scripts/update_style_library.py --with-images
 ## 许可边界
 
 本路由器的代码和上游资源是两件事。README 必须保留 [handraw-style](https://github.com/yang0/handraw-style) 来源、具体提交版本和作者归属；来源说明不等于上游图片的再分发许可。在上游许可证未核实前，只在用户本地按需拉取图片，不将图片复制进公开仓库或发布包。
-

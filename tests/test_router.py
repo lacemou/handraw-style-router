@@ -10,6 +10,10 @@ SCRIPT_DIR = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from build_style_profiles import build_profiles  # noqa: E402
+from repair_style_assets import (  # noqa: E402
+    KNOWN_ASSET_REPAIRS,
+    _crop_contact_sheet,
+)
 from route_topic import infer_topic_features, route_topic  # noqa: E402
 from update_style_library import _merge_review_status  # noqa: E402
 
@@ -77,6 +81,29 @@ class RouterTest(unittest.TestCase):
             statuses = {item["style_id"]: item["status"] for item in merged["styles"]}
             self.assertEqual(statuses, {"001": "reviewed", "262": "gallery_only"})
             self.assertEqual(merged["profile_status"], "mixed_review_state")
+
+    def test_known_046_repair_selects_and_fits_the_verified_source_region(self) -> None:
+        from io import BytesIO
+
+        from PIL import Image
+
+        rule = {
+            "crop_box": [10, 20, 30, 40],
+            "output_size": [20, 20],
+        }
+        sheet = Image.new("RGB", (40, 50), "white")
+        for y in range(20, 40):
+            for x in range(10, 30):
+                sheet.putpixel((x, y), (10, 50, 90))
+        encoded = BytesIO()
+        sheet.save(encoded, format="PNG")
+
+        repaired, box = _crop_contact_sheet(encoded.getvalue(), rule)
+        with Image.open(BytesIO(repaired)) as image:
+            self.assertEqual(image.size, (20, 20))
+            self.assertEqual(image.getpixel((5, 5)), (10, 50, 90))
+        self.assertEqual(box, (10, 20, 30, 40))
+        self.assertEqual(KNOWN_ASSET_REPAIRS["046"]["crop_box"], [527, 630, 730, 960])
 
 
 if __name__ == "__main__":

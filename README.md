@@ -17,12 +17,19 @@
 
 ## 快速开始
 
-需要 Python 3.10+，核心脚本只使用标准库。
+需要 Python 3.10+。路由核心使用标准库；示意图资源修复需要 Pillow。
 
 首次同步元数据和示意图：
 
 ```bash
+python -m pip install -r requirements.txt
 python scripts/update_style_library.py --with-images
+```
+
+资源更新后会自动修复已确认的上游异常示意图。如果本地已经同步过示意图，只想重新应用修复而不重新下载全部图片，可运行：
+
+```bash
+python scripts/update_style_library.py --repair-assets
 ```
 
 只同步元数据：
@@ -67,7 +74,8 @@ python scripts/route_topic.py \
 SKILL.md                         Agent 入口和行为边界
 agents/openai.yaml               Codex UI 元数据
 references/                      字段和更新策略
-scripts/update_style_library.py  明确触发的上游资源同步
+scripts/update_style_library.py  明确触发的上游资源同步和已知资源修复
+scripts/repair_style_assets.py   可追溯的示意图修复规则
 scripts/build_style_profiles.py  从上游元数据构建初版画像
 scripts/route_topic.py           六维评分和五候选选择
 tests/                           不依赖上游图片的本地回归
@@ -87,4 +95,3 @@ python -m unittest discover -s tests -v
 ```
 
 当前目标是先验证路由行为和边界，不把一次本地冒烟测试宣传成所有主题都稳定命中。
-

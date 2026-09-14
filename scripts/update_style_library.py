@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from build_style_profiles import build_profiles
+from repair_style_assets import apply_known_repairs
 
 
 UPSTREAM_REPOSITORY = "yang0/handraw-style"
@@ -81,9 +82,16 @@ def _merge_review_status(profiles_payload: dict[str, Any], previous_path: Path) 
     return profiles_payload
 
 
-def update_library(output_dir: Path, *, revision: str, with_images: bool) -> dict[str, Any]:
+def update_library(
+    output_dir: Path,
+    *,
+    revision: str,
+    with_images: bool,
+    repair_assets: bool = False,
+) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     previous_profiles_path = output_dir / "style-profiles.json"
+    previous_source_path = output_dir / "source.json"
     base = f"https://raw.githubusercontent.com/{UPSTREAM_REPOSITORY}/{revision}"
     styles_url = f"{base}/{STYLES_PATH}"
     styles = json.loads(_request(styles_url).decode("utf-8"))
@@ -92,6 +100,17 @@ def update_library(output_dir: Path, *, revision: str, with_images: bool) -> dic
 
     preview_dir = output_dir / "previews"
     existing_preview_files = list(preview_dir.glob("*.png")) if preview_dir.exists() else []
+    previous_repairs: list[dict[str, Any]] = []
+    if previous_source_path.exists():
+        try:
+            previous_source = json.loads(previous_source_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            previous_source = {}
+        if isinstance(previous_source, dict) and previous_source.get("revision") == revision:
+            previous_repairs = [
+                item for item in previous_source.get("asset_repairs", []) if isinstance(item, dict)
+            ]
+
     source = {
         "repository": UPSTREAM_REPOSITORY,
         "revision": revision,
@@ -100,11 +119,10 @@ def update_library(output_dir: Path, *, revision: str, with_images: bool) -> dic
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "style_count": len(styles),
         "images_downloaded": bool(with_images or existing_preview_files),
+        "asset_repairs": previous_repairs,
     }
     catalog_path = output_dir / "catalog" / "styles.json"
     source_path = output_dir / "source.json"
-    _write_json(catalog_path, styles)
-    _write_json(source_path, source)
 
     if with_images:
         preview_dir.mkdir(parents=True, exist_ok=True)
@@ -115,6 +133,21 @@ def update_library(output_dir: Path, *, revision: str, with_images: bool) -> dic
             destination.write_bytes(_request(url))
             if index % 25 == 0 or index == len(styles):
                 print(f"downloaded previews: {index}/{len(styles)}", file=sys.stderr)
+
+    if repair_assets:
+        if not preview_dir.exists() or not any(preview_dir.glob("*.png")):
+            raise RuntimeError("--repair-assets 需要已有本地示意图；首次同步请使用 --with-images")
+    if with_images or repair_assets:
+        source["asset_repairs"] = apply_known_repairs(
+            preview_dir=preview_dir,
+            source_sheet_dir=output_dir / "source-sheets",
+            base_url=base,
+            revision=revision,
+            request=_request,
+        )
+
+    _write_json(catalog_path, styles)
+    _write_json(source_path, source)
 
     preview_available = preview_dir.exists() and any(preview_dir.glob("*.png"))
     profiles = build_profiles(
@@ -140,10 +173,20 @@ def main() -> int:
     revision_group.add_argument("--revision", default=DEFAULT_REVISION, help="Pinned upstream commit or ref")
     revision_group.add_argument("--latest", action="store_true", help="Resolve upstream master now and pin its commit")
     parser.add_argument("--with-images", action="store_true", help="Also download the 261+ single-image previews")
+    parser.add_argument(
+        "--repair-assets",
+        action="store_true",
+        help="Repair known malformed previews in an existing local image library",
+    )
     args = parser.parse_args()
 
     revision = _resolve_latest() if args.latest else args.revision
-    update_library(args.output, revision=revision, with_images=args.with_images)
+    update_library(
+        args.output,
+        revision=revision,
+        with_images=args.with_images,
+        repair_assets=args.repair_assets,
+    )
     return 0
 
 
