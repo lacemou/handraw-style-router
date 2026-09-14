@@ -1,0 +1,4 @@
+interface:
+  display_name: "handraw-style-router"
+  short_description: "输入主题，推荐五个有差异的 handraw 手绘风格"
+  default_prompt: "使用 $handraw-style-router，根据我的主题推荐五个 handraw 风格候选，并附上示意图与选择理由。"
