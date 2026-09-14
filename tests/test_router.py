@@ -10,6 +10,7 @@ SCRIPT_DIR = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from build_style_profiles import build_profiles  # noqa: E402
+from ensure_runtime import inspect_runtime  # noqa: E402
 from repair_style_assets import (  # noqa: E402
     KNOWN_ASSET_REPAIRS,
     _crop_contact_sheet,
@@ -106,6 +107,37 @@ class RouterTest(unittest.TestCase):
         self.assertEqual(result["styles"][0]["style_id"], "022")
         self.assertEqual(result["styles"][0]["status"], "heuristic_pending_review")
         self.assertIn("people", result["styles"][0]["route_affordances"]["subject"])
+
+    def test_runtime_gate_requires_complete_local_resources(self) -> None:
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as directory:
+            runtime = Path(directory)
+            not_ready = inspect_runtime(runtime)
+            self.assertFalse(not_ready["ready"])
+            self.assertIn("style-profiles.json 缺失或格式无效", not_ready["problems"])
+
+            styles = [
+                {"style_id": str(index).zfill(3), "status": "reviewed"}
+                for index in range(1, 6)
+            ]
+            (runtime / "style-profiles.json").write_text(
+                json.dumps({"styles": styles}), encoding="utf-8"
+            )
+            (runtime / "source.json").write_text(
+                json.dumps({"images_downloaded": True}), encoding="utf-8"
+            )
+            preview_dir = runtime / "previews"
+            preview_dir.mkdir()
+            for index in range(1, 6):
+                (preview_dir / f"{index:03d}.png").write_bytes(
+                    b"\x89PNG\r\n\x1a\nfixture"
+                )
+
+            ready = inspect_runtime(runtime)
+            self.assertTrue(ready["ready"])
+            self.assertEqual(ready["routeable_count"], 5)
+            self.assertEqual(ready["preview_count"], 5)
 
     def test_new_style_is_gallery_only_after_existing_library_update(self) -> None:
         from tempfile import TemporaryDirectory

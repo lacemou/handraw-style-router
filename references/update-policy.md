@@ -1,14 +1,16 @@
 # 风格库更新策略
 
-## 首次同步
+## 首次运行初始化
 
-由用户明确触发：
+安装 Skill 后，第一次调用路由前必须运行初始化门禁：
 
 ```bash
-python scripts/update_style_library.py --with-images
+python scripts/ensure_runtime.py
 ```
 
-脚本会把上游 `styles.json`、单图示意图和抓取信息写入 `.runtime/style-library/`。这里的运行时目录不提交 Git，也不进入公开 Skill 包。下载单图后，脚本还会应用 `scripts/repair_style_assets.py` 中已确认的本地修复规则，并把修复来源、切片位置和 SHA-256 写入 `source.json`；这不修改上游仓库。
+`ensure_runtime.py` 会检查画像、来源记录和示意图是否完整；如果缺失，就调用固定上游提交的同步流程。它会把上游 `styles.json`、单图示意图和抓取信息写入 `.runtime/style-library/`。这里的运行时目录不提交 Git，也不进入公开 Skill 包。下载单图后，脚本还会应用 `scripts/repair_style_assets.py` 中已确认的本地修复规则，并把修复来源、切片位置和 SHA-256 写入 `source.json`；这不修改上游仓库。
+
+初始化失败时必须停止路由，并报告依赖或网络问题；不能把没有示意图的结果当成正常推荐。
 
 如果本地已经同步过示意图，只需重新应用已知修复，不必重新下载全部图片：
 

@@ -31,7 +31,7 @@
 - 不保证生图模型一定复现某位参考作者的画面；
 - 不负责公众号、小红书或其他平台的发布。
 
-当前以 OpenAI Image 2（能力键 `gpt-image-2`）作为生图验证基准。WorkBuddy、豆包工作等其他 Agent 目前只能说“理论上可适配”，不能承诺相同的生图效果。
+生图模型由宿主 Agent 的 ImageGen 能力决定，本项目不把内置生图模型版本写死。使用可显式指定模型的 API 或 CLI 时，应记录实际 model ID。WorkBuddy、豆包工作等其他 Agent 目前只能说“理论上可适配”，不能承诺相同的生图效果。
 
 ## 在 Codex 中使用
 
@@ -49,7 +49,7 @@ npx -y skills add <owner>/<repo> -g --all
 主题：今天股票又亏钱了。
 ~~~
 
-Skill 会优先使用本地的风格库。如果本地没有同步资源，会说明需要先同步，而不会假装已经查看过示意图。
+安装命令只负责安装 Skill 文件，不会执行仓库中的 Python 下载脚本。第一次真正调用 Skill 时，它会先运行初始化门禁：如果本地没有完整风格库，就自动下载固定版本的上游元数据和示意图；同步失败则停止路由并报告原因，不会假装已经查看过示意图。
 
 ## 本地运行
 
@@ -61,10 +61,16 @@ Skill 会优先使用本地的风格库。如果本地没有同步资源，会�
 python -m pip install -r requirements.txt
 ~~~
 
-首次同步上游元数据和示意图：
+首次使用时，先运行初始化门禁。已有完整资源时它只做检查；资源缺失时会自动完成首次同步：
 
 ~~~bash
-python scripts/update_style_library.py --with-images
+python scripts/ensure_runtime.py
+~~~
+
+如果 Skill 安装目录不是当前工作目录，请使用该 Skill 目录下的 `scripts/ensure_runtime.py` 绝对路径。初始化需要网络和 Pillow，失败时可先运行：
+
+~~~bash
+python -m pip install -r requirements.txt
 ~~~
 
 只同步元数据：
@@ -106,7 +112,7 @@ python scripts/route_topic.py --topic "iphone 18 duo 发布，售价太贵，买
 
 ## 风格库与更新
 
-本项目基于 [yang0/handraw-style](https://github.com/yang0/handraw-style) 的风格目录和示意图进行路由设计。示意图和上游元数据只在用户明确触发同步时，下载到本地 `.runtime/style-library/`，不随代码仓库分发。
+本项目基于 [yang0/handraw-style](https://github.com/yang0/handraw-style) 的风格目录和示意图进行路由设计。首次使用时，初始化门禁会按需下载到本地 `.runtime/style-library/`；后续更新只有在用户明确触发时才执行。运行时资源不随代码仓库分发。
 
 更新流程不会在后台运行：
 
@@ -140,6 +146,7 @@ references/profile-schema.md          风格画像字段和状态
 references/topic-feature-schema.md    六维主题解析契约和回归例子
 references/update-policy.md           风格库更新与许可边界
 scripts/update_style_library.py       上游资源同步
+scripts/ensure_runtime.py             首次运行的资源初始化门禁
 scripts/repair_style_assets.py        已确认的本地示意图修复规则
 scripts/build_style_profiles.py       从上游元数据构建初版画像
 scripts/route_topic.py                六维评分和五候选选择

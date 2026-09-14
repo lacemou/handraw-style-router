@@ -14,22 +14,34 @@ metadata:
 - 用户只需要提供主题；不要把画幅、配色、文案、人物设定等要求变成必填项。
 - 如果用户已经有参考图，优先让用户直接把参考图交给生图模型；不要强行经过本路由器。
 - 不学习账号历史偏好，也不加入账号视觉风格分数。每次只根据当前主题计算。
-- 以 OpenAI Image 2（仓库能力键 `gpt-image-2`）作为验证基准。WorkBuddy、豆包工作等其他 Agent 的适配只能表述为“理论上可适配”，不承诺相同生图效果。
+- 生图模型由宿主 Agent 的 ImageGen 能力决定，本 Skill 不把内置生图模型版本写死；如使用可显式指定模型的 API 或 CLI，必须在运行记录中写明实际 model ID。WorkBuddy、豆包工作等其他 Agent 的适配只能表述为“理论上可适配”，不承诺相同生图效果。
 - 选中编号后，才把“原始主题 + 编号”交给上游 `handraw-style` 的提示词模块；本 Skill 不复制那套提示词生成逻辑。
 
 ## 执行流程
 
-### 1. 检查本地风格库
+### 1. 强制初始化本地风格库
 
-运行时库默认位于项目的 `.runtime/style-library/`，由用户明确触发的更新命令生成。若目录不存在或没有至少 5 个可用风格，先说明需要同步资源，不要假装已经看过示意图。
-
-首次同步或用户明确说“更新风格库”时运行：
+运行时库默认位于项目的 `.runtime/style-library/`。在解析主题和调用路由脚本之前，必须先运行幂等的初始化门禁：
 
 ```bash
-python scripts/update_style_library.py --with-images
+python scripts/ensure_runtime.py
 ```
 
-更新脚本会记录上游提交版本。不要在后台联网检查；新条目先进入本地画廊，完成标签复核和路由回归后，才能进入正式推荐。
+如果 Skill 安装目录不是当前工作目录，先把 `scripts/ensure_runtime.py` 替换为该 Skill 目录下的绝对路径。这个脚本会检查 `style-profiles.json`、`source.json`、至少 5 个可路由风格和对应的有效 PNG 示意图：
+
+- 已有完整运行时库：只检查，不重复下载；
+- 目录不存在或不完整：自动按固定上游提交下载 261+ 张示意图，并构建风格画像；
+- 依赖、网络或下载失败：停止本次路由，报告失败原因和修复命令，不返回没有示意图的假成功结果。
+
+只有 `ensure_runtime.py` 成功后，才能进入下一步。首次同步是首次运行的必需项；后续更新仍然不在后台执行，只有用户明确说“更新风格库”时才运行更新命令。新条目先进入本地画廊，完成标签复核和路由回归后，才能进入正式推荐。
+
+后续脚本应从包含本 `SKILL.md` 的 Skill 根目录执行，或全部使用该目录下的绝对路径；不要把调用方项目中的 `.runtime/` 误当成 Skill 的运行时目录。
+
+后续明确更新时运行：
+
+```bash
+python scripts/update_style_library.py --latest --with-images
+```
 
 ### 2. 解析主题
 
@@ -84,6 +96,6 @@ python scripts/route_topic.py \
 
 ## 资源与上游边界
 
-本项目不把上游示意图直接打包进公开仓库。图片和上游元数据由用户明确触发时按固定提交版本拉取到本地运行时目录，运行时目录被 Git 忽略。上游来源、提交版本和抓取时间必须保留在 `source.json` 中；没有声明上游许可证时，不要把“已注明来源”说成“已获得再分发许可”。
+本项目不把上游示意图直接打包进公开仓库。首次运行由 `ensure_runtime.py` 按固定提交版本拉取到本地运行时目录，后续更新必须由用户明确触发；运行时目录被 Git 忽略。上游来源、提交版本和抓取时间必须保留在 `source.json` 中；没有声明上游许可证时，不要把“已注明来源”说成“已获得再分发许可”。
 
 详细字段结构见 [references/profile-schema.md](references/profile-schema.md)，主题解析契约见 [references/topic-feature-schema.md](references/topic-feature-schema.md)，更新策略见 [references/update-policy.md](references/update-policy.md)。
