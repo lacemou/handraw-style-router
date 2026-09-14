@@ -33,7 +33,7 @@ python scripts/update_style_library.py --with-images
 
 ### 2. 解析主题
 
-在调用路由脚本前，把主题解析成内部结构，不要求用户填写或确认。字段固定为：
+在调用路由脚本前，模型必须先把主题解析成内部结构，不要求用户填写或确认。字段固定为：
 
 ```json
 {
@@ -46,7 +46,7 @@ python scripts/update_style_library.py --with-images
 }
 ```
 
-`narrative_density` 为 0–3：0 表示单一对象或概念，3 表示人物关系、事件推进或强故事场景。优先使用模型对自然语言的理解；脚本内置的关键词解析只作为没有结构化解析时的可复现降级方案。
+`narrative_density` 为 0–3：0 表示单一对象或概念，3 表示人物关系、事件推进或强故事场景。模型输出必须遵守 [主题六维解析契约](references/topic-feature-schema.md)；不要把用户原句直接复制成标签，也不要新增未约定字段。
 
 ### 3. 运行确定性路由
 
@@ -55,15 +55,18 @@ python scripts/update_style_library.py --with-images
 ```bash
 python scripts/route_topic.py \
   --topic "用户原始主题" \
+  --features-file topic-features.json \
   --profiles .runtime/style-library/style-profiles.json \
   --json
 ```
 
-如已有模型解析结果，将其保存为临时 JSON 后传入 `--features-file`。脚本按以下顺序工作：
+如已有模型解析结果，将其保存为临时 JSON 后传入 `--features-file`，或直接使用 `--features-json`。脚本会校验六个字段，再按以下顺序工作：
 
 1. 对全部已进入推荐状态的风格计算基础匹配分：主体/动作 40%，视觉抽象 25%，场景/故事 20%，情绪 15%。
 2. 先选“最稳妥”，再按角色目标和多样性惩罚选择其他候选，避免五张图只是同一类风格的近似重复。
 3. “差异化候选”优先同时满足主题匹配达到最低阈值、并且与已选候选在视觉标签或风格组上有明显距离；如果没有未使用风格组达到主阈值，可以在较低但仍相关的次级阈值内保留一个差异化候选，并明确给出警告。
+
+如果没有结构化主题 JSON，脚本可以运行关键词降级解析，但结果会标记 `feature_source: keyword_fallback` 并明确警告；不能把降级结果描述成已经完成模型语义解析。
 
 ## 对用户的固定输出
 
@@ -75,7 +78,7 @@ python scripts/route_topic.py \
 4. `推荐4：最容易读懂主题`
 5. `推荐5：差异化候选`
 
-每条只展示：风格编号、风格名、上游参考作者/风格名、仓库中的示意图和一句基于匹配维度的理由。示意图必须使用可直接渲染的 Markdown 图片语法，而不是只输出普通链接或文件路径，例如：`![#046 示意图](D:/path/to/046.png)`；程序内部仍可保留原始 `preview_path`。不要把内部 0–1 分数包装成精确结论；如标签仍是自动初版，明确标注“标签待复核”。
+每条只展示：风格编号、风格名、上游参考作者/风格名、仓库中的示意图和一句基于匹配维度的理由。示意图必须使用可直接渲染的 Markdown 图片语法（图片替代文字加本地绝对 PNG 路径），而不是只输出普通链接或文件路径；程序内部仍可保留原始 `preview_path`。不要把内部 0–1 分数包装成精确结论；如标签仍是自动初版，明确标注“标签待复核”。
 
 推荐结束后只问用户想选哪一个编号。用户选择后，说明可以继续把“原始主题 + 编号”交给 `handraw-style`；不要在本步骤自动生成完整提示词或图片。
 
@@ -83,4 +86,4 @@ python scripts/route_topic.py \
 
 本项目不把上游示意图直接打包进公开仓库。图片和上游元数据由用户明确触发时按固定提交版本拉取到本地运行时目录，运行时目录被 Git 忽略。上游来源、提交版本和抓取时间必须保留在 `source.json` 中；没有声明上游许可证时，不要把“已注明来源”说成“已获得再分发许可”。
 
-详细字段结构见 [references/profile-schema.md](references/profile-schema.md)，更新策略见 [references/update-policy.md](references/update-policy.md)。
+详细字段结构见 [references/profile-schema.md](references/profile-schema.md)，主题解析契约见 [references/topic-feature-schema.md](references/topic-feature-schema.md)，更新策略见 [references/update-policy.md](references/update-policy.md)。

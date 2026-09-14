@@ -33,6 +33,9 @@ DIMENSION_LABELS = {
     "mood": "气质",
 }
 
+FEATURE_KEYS = ("subject", "action", "scene", "abstraction", "mood", "narrative_density")
+FEATURE_LIST_KEYS = ("subject", "action", "scene", "abstraction", "mood")
+
 ALIASES = {
     "人": "people",
     "人物": "people",
@@ -85,6 +88,33 @@ def _values(value: Any) -> list[str]:
 
 def _contains_any(text: str, words: Iterable[str]) -> bool:
     return any(word and word in text for word in words)
+
+
+def validate_topic_features(features: Any) -> dict[str, Any]:
+    """Validate and normalize the six-dimensional model output."""
+    if not isinstance(features, dict):
+        raise ValueError("topic features must be a JSON object")
+    missing = [key for key in FEATURE_KEYS if key not in features]
+    unknown = sorted(set(features) - set(FEATURE_KEYS))
+    if missing:
+        raise ValueError(f"topic features missing required fields: {', '.join(missing)}")
+    if unknown:
+        raise ValueError(f"topic features contain unknown fields: {', '.join(unknown)}")
+
+    normalized: dict[str, Any] = {}
+    for key in FEATURE_LIST_KEYS:
+        values = features[key]
+        if not isinstance(values, list) or not values:
+            raise ValueError(f"topic feature '{key}' must be a non-empty JSON array")
+        if not all(isinstance(value, str) and value.strip() for value in values):
+            raise ValueError(f"topic feature '{key}' must contain non-empty strings")
+        normalized[key] = list(dict.fromkeys(_norm(value) for value in values))
+
+    density = features["narrative_density"]
+    if isinstance(density, bool) or not isinstance(density, int) or not 0 <= density <= 3:
+        raise ValueError("narrative_density must be an integer from 0 to 3")
+    normalized["narrative_density"] = density
+    return normalized
 
 
 def infer_topic_features(topic: str) -> dict[str, Any]:
@@ -328,10 +358,21 @@ def load_profiles(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     return styles, payload
 
 
-def route_topic(topic: str, profiles: list[dict[str, Any]], features: dict[str, Any] | None = None) -> dict[str, Any]:
+def route_topic(
+    topic: str,
+    profiles: list[dict[str, Any]],
+    features: dict[str, Any] | None = None,
+    *,
+    feature_source: str | None = None,
+) -> dict[str, Any]:
     if len(profiles) < 5:
         raise ValueError("at least 5 style profiles are required")
-    features = features or infer_topic_features(topic)
+    if features is None:
+        features = infer_topic_features(topic)
+        feature_source = "keyword_fallback"
+    else:
+        feature_source = feature_source or "structured_features"
+    features = validate_topic_features(features)
     scored = []
     for profile in profiles:
         if profile.get("status") in {"disabled", "gallery_only"}:
@@ -397,6 +438,8 @@ def route_topic(topic: str, profiles: list[dict[str, Any]], features: dict[str, 
         selected.append(best_item)
 
     warnings = []
+    if feature_source == "keyword_fallback":
+        warnings.append("本次使用关键词降级解析；正式推荐应先由模型形成六维主题 JSON，再交给脚本评分。")
     if top_base < 0.50:
         warnings.append("没有达到高匹配阈值的风格，以上为当前库中的最近候选。")
     if relaxed_diversity:
@@ -433,6 +476,7 @@ def route_topic(topic: str, profiles: list[dict[str, Any]], features: dict[str, 
     return {
         "schema_version": "0.1",
         "topic": topic,
+        "feature_source": feature_source,
         "topic_features": features,
         "candidates": candidates,
         "warnings": warnings,
@@ -443,13 +487,27 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Route a topic to five diverse handraw-style candidates")
     parser.add_argument("--topic", required=True)
     parser.add_argument("--profiles", type=Path, required=True)
-    parser.add_argument("--features-file", type=Path)
+    feature_group = parser.add_mutually_exclusive_group()
+    feature_group.add_argument(
+        "--features-file",
+        type=Path,
+        help="Model-produced six-dimensional topic JSON file",
+    )
+    feature_group.add_argument(
+        "--features-json",
+        help="Model-produced six-dimensional topic JSON object",
+    )
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     args = parser.parse_args()
 
     profiles, library = load_profiles(args.profiles)
-    features = json.loads(args.features_file.read_text(encoding="utf-8")) if args.features_file else None
-    result = route_topic(args.topic, profiles, features)
+    if args.features_file:
+        features = json.loads(args.features_file.read_text(encoding="utf-8"))
+    elif args.features_json:
+        features = json.loads(args.features_json)
+    else:
+        features = None
+    result = route_topic(args.topic, profiles, features, feature_source="structured_features" if features is not None else None)
     result["library"] = {
         "profile_status": library.get("profile_status"),
         "source": library.get("source", {}),

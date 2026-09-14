@@ -38,7 +38,7 @@ python scripts/update_style_library.py --repair-assets
 python scripts/update_style_library.py
 ```
 
-输入一个主题并取得 JSON 结果：
+输入一个主题并取得 JSON 结果（不提供六维 JSON 时，只是关键词降级解析）：
 
 ```bash
 python scripts/route_topic.py \
@@ -68,12 +68,15 @@ python scripts/route_topic.py \
   --json
 ```
 
+六维字段的解析契约和两个领域主题示例见 [references/topic-feature-schema.md](references/topic-feature-schema.md)。正式 Skill 流程应先由模型形成该 JSON，再交给脚本评分；脚本本身不调用另一个模型。
+
 ## 目录
 
 ```text
 SKILL.md                         Agent 入口和行为边界
 agents/openai.yaml               Codex UI 元数据
 references/                      字段和更新策略
+references/topic-feature-schema.md  模型主题解析契约和回归例子
 scripts/update_style_library.py  明确触发的上游资源同步和已知资源修复
 scripts/repair_style_assets.py   可追溯的示意图修复规则
 scripts/build_style_profiles.py  从上游元数据构建初版画像

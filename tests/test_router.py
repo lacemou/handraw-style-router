@@ -14,7 +14,12 @@ from repair_style_assets import (  # noqa: E402
     KNOWN_ASSET_REPAIRS,
     _crop_contact_sheet,
 )
-from route_topic import _preview_markdown, infer_topic_features, route_topic  # noqa: E402
+from route_topic import (  # noqa: E402
+    _preview_markdown,
+    infer_topic_features,
+    route_topic,
+    validate_topic_features,
+)
 from update_style_library import _merge_review_status  # noqa: E402
 
 
@@ -44,6 +49,44 @@ class RouterTest(unittest.TestCase):
         ])
         self.assertEqual(len({item["style_id"] for item in result["candidates"]}), 5)
         self.assertGreaterEqual(len({item["group"] for item in result["candidates"]}), 5)
+
+    def test_structured_features_are_used_without_fallback_warning(self) -> None:
+        features = {
+            "subject": ["technology", "objects"],
+            "action": ["comparison"],
+            "scene": ["digital", "everyday"],
+            "abstraction": ["editorial", "lifestyle"],
+            "mood": ["anxious", "curious"],
+            "narrative_density": 1,
+        }
+        result = route_topic(
+            "iphone 18 duo发布，售价太贵，买不买，很纠结。",
+            self.payload["styles"],
+            features,
+            feature_source="structured_features",
+        )
+        self.assertEqual(result["feature_source"], "structured_features")
+        self.assertEqual(result["topic_features"], features)
+        self.assertFalse(any("降级解析" in warning for warning in result["warnings"]))
+
+    def test_fallback_is_explicitly_reported(self) -> None:
+        result = route_topic("今天股票又亏钱了。", self.payload["styles"])
+        self.assertEqual(result["feature_source"], "keyword_fallback")
+        self.assertTrue(any("降级解析" in warning for warning in result["warnings"]))
+
+    def test_structured_features_reject_missing_or_unknown_fields(self) -> None:
+        with self.assertRaises(ValueError):
+            validate_topic_features({"subject": ["technology"]})
+        with self.assertRaises(ValueError):
+            validate_topic_features({
+                "subject": ["technology"],
+                "action": ["comparison"],
+                "scene": ["digital"],
+                "abstraction": ["editorial"],
+                "mood": ["anxious"],
+                "narrative_density": 1,
+                "domain": "consumer-tech",
+            })
 
     def test_preview_output_is_a_renderable_markdown_image(self) -> None:
         rendered = _preview_markdown("046", r"D:\work\previews\046.png")
