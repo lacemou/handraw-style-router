@@ -35,10 +35,10 @@
 
 ## 在 Codex 中使用
 
-如果仓库已经发布到 GitHub，可以用下面的命令安装。将 `<owner>/<repo>` 替换为实际仓库坐标：
+本项目的 GitHub 仓库地址是 [lacemou/handraw-style-router](https://github.com/lacemou/handraw-style-router)，可以用下面的一句话安装：
 
 ~~~bash
-npx -y skills add <owner>/<repo> -g --all
+npx -y skills add lacemou/handraw-style-router -g --all
 ~~~
 
 安装后，直接输入类似下面的请求即可：
@@ -166,6 +166,6 @@ python -m unittest discover -s tests -v
 
 ## 许可证与上游归属
 
-本仓库当前尚未选定代码许可证。在公开发布前，应由维护者选择并添加明确的 `LICENSE` 文件。
+本仓库代码和文档采用 [MIT License](LICENSE)。该许可证只适用于本项目自身的代码和文档，不自动覆盖上游项目的风格目录、作者归属或示意图。
 
 上游项目：[yang0/handraw-style](https://github.com/yang0/handraw-style)。本项目是基于其公开风格目录建立的路由工具，不代表上游作者参与本项目，也不代表本项目获得了上游示意图的再分发授权。
