@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build routeable style profiles from handraw-style's upstream metadata.
 
-The generated labels are deliberately marked as heuristic_pending_review. This
+The generated labels are deliberately marked as heuristic. This
 script provides a reproducible starting point; it is not an artistic ground
 truth or a substitute for reviewing the reference images.
 """
@@ -16,87 +16,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = "0.1"
-
-GROUP_DEFAULTS: dict[str, dict[str, Any]] = {
-    "A": {
-        "subject": ["people", "ideas"],
-        "action": ["observation", "commentary"],
-        "scene": ["public", "editorial"],
-        "abstraction": ["editorial", "conceptual"],
-        "mood": ["humorous", "intellectual"],
-        "narrative_density": 1,
-        "visual_energy": 2,
-        "graphic_clarity": 3,
-        "color_intensity": 1,
-    },
-    "B": {
-        "subject": ["people", "animals", "daily-life"],
-        "action": ["storytelling", "observation"],
-        "scene": ["everyday", "nature", "home"],
-        "abstraction": ["narrative", "lifestyle"],
-        "mood": ["gentle", "warm"],
-        "narrative_density": 3,
-        "visual_energy": 2,
-        "graphic_clarity": 2,
-        "color_intensity": 2,
-    },
-    "C": {
-        "subject": ["people", "objects", "ideas"],
-        "action": ["presentation", "observation"],
-        "scene": ["editorial", "public"],
-        "abstraction": ["graphic", "conceptual"],
-        "mood": ["modern", "intellectual"],
-        "narrative_density": 1,
-        "visual_energy": 3,
-        "graphic_clarity": 3,
-        "color_intensity": 2,
-    },
-    "D": {
-        "subject": ["people", "daily-life"],
-        "action": ["observation", "storytelling"],
-        "scene": ["everyday", "urban", "nature"],
-        "abstraction": ["lifestyle", "narrative"],
-        "mood": ["gentle", "quiet"],
-        "narrative_density": 2,
-        "visual_energy": 1,
-        "graphic_clarity": 2,
-        "color_intensity": 1,
-    },
-    "E": {
-        "subject": ["people", "daily-life", "ideas"],
-        "action": ["observation", "storytelling"],
-        "scene": ["everyday", "urban", "home"],
-        "abstraction": ["narrative", "lifestyle"],
-        "mood": ["warm", "poetic"],
-        "narrative_density": 2,
-        "visual_energy": 2,
-        "graphic_clarity": 2,
-        "color_intensity": 2,
-    },
-    "F": {
-        "subject": ["people", "technology", "objects"],
-        "action": ["work", "presentation", "commentary"],
-        "scene": ["urban", "public", "media"],
-        "abstraction": ["lifestyle", "editorial", "explanatory"],
-        "mood": ["playful", "modern", "energetic"],
-        "narrative_density": 1,
-        "visual_energy": 3,
-        "graphic_clarity": 3,
-        "color_intensity": 3,
-    },
-    "G": {
-        "subject": ["people", "daily-life", "ideas"],
-        "action": ["observation", "storytelling", "presentation"],
-        "scene": ["everyday", "urban", "nature"],
-        "abstraction": ["narrative", "lifestyle", "graphic"],
-        "mood": ["warm", "modern", "poetic"],
-        "narrative_density": 2,
-        "visual_energy": 2,
-        "graphic_clarity": 2,
-        "color_intensity": 2,
-    },
-}
+SCHEMA_VERSION = "2.1"
 
 TAG_RULES: dict[str, dict[str, list[str]]] = {
     "subject": {
@@ -172,11 +92,6 @@ def _unique(values: list[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
 
-def _group_key(group: str) -> str:
-    match = re.match(r"\s*([A-Z])", group or "")
-    return match.group(1) if match else "G"
-
-
 def _text_matches(text: str, words: list[str]) -> int:
     return sum(1 for word in words if word and word in text)
 
@@ -209,24 +124,25 @@ def build_profiles(styles: list[dict[str, Any]], *, source: dict[str, Any] | Non
     for style in styles:
         number = str(style["number"]).zfill(3)
         group = str(style.get("group", ""))
-        group_defaults = GROUP_DEFAULTS.get(_group_key(group), GROUP_DEFAULTS["G"])
         traits = str(style.get("traits", ""))
+        # Classified FA..FH groups have different meanings from v1's A..G.
+        # Artist handles (e.g. OscarAI) are attribution, not subject evidence.
         text = " ".join(
-            str(style.get(key, "")) for key in ("group", "reference", "generation_name", "traits")
+            str(style.get(key, "")) for key in ("group", "generation_name", "traits")
         )
         affordances: dict[str, Any] = {
-            dimension: _derive_tags(dimension, text, list(group_defaults[dimension]))
+            dimension: _derive_tags(dimension, text, [])
             for dimension in ("subject", "action", "scene", "abstraction", "mood")
         }
-        narrative_density = int(group_defaults["narrative_density"])
+        narrative_density = 0
         narrative_density += _text_matches(text, TEXT_ADJUSTMENTS["narrative_density"]["up"])
         narrative_density -= _text_matches(text, TEXT_ADJUSTMENTS["narrative_density"]["down"])
         affordances.update(
             {
                 "narrative_density": _bounded(narrative_density),
-                "visual_energy": _derive_metric("visual_energy", text, int(group_defaults["visual_energy"])),
-                "graphic_clarity": _derive_metric("graphic_clarity", text, int(group_defaults["graphic_clarity"])),
-                "color_intensity": _derive_metric("color_intensity", text, int(group_defaults["color_intensity"])),
+                "visual_energy": _derive_metric("visual_energy", text, 1),
+                "graphic_clarity": _derive_metric("graphic_clarity", text, 1),
+                "color_intensity": _derive_metric("color_intensity", text, 1),
             }
         )
         preview_path = None
@@ -249,12 +165,12 @@ def build_profiles(styles: list[dict[str, Any]], *, source: dict[str, Any] | Non
                     "confidence": 0.45,
                     "source_revision": source.get("revision"),
                 },
-                "status": "heuristic_pending_review",
+                "status": "heuristic",
             }
         )
     return {
         "schema_version": SCHEMA_VERSION,
-        "profile_status": "heuristic_pending_review",
+        "profile_status": "heuristic",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": source,
         "styles": profiles,
@@ -282,4 +198,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

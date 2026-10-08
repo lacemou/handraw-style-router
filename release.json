@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "version": "2.0.0",
+  "archive_url": "https://github.com/lacemou/handraw-style-router/releases/download/v2.0.0/handraw-style-router-2.0.0.zip",
+  "archive_sha256": "4129ee291909470abb471ca283f4335ba2ea44b8a541d6111a9bf6c4b51bff23",
+  "files": {
+    "SKILL.md": "d493900d37fdeef985e7b5030915bb4ae7c160c27937b4e928c7e2f5fb40a310",
+    "README.md": "34dc0eec5db3e0f0e2633c67cf0e4b561d7bb37ee4eea7644dc214256d8d7bed",
+    "LICENSE": "c0576c2bd3ba69d2bda9a4ce3dd0311b711f15fb0d39daf823499ab05130fa68",
+    "version.json": "a40382aa1dec47c637c682d02258a06cd3fce6fb540244f4db1e9dde2e2810cb",
+    "requirements.txt": "dce978a554b00caca70d59f539d25c61fcc89681e02d7fec42948cd5c3c0a127",
+    "scripts/library.py": "a2c17816202ff2cea6f726dc68a3b9739c8090eb7afa98903a3b3a2275d06105",
+    "scripts/profile_builder.py": "7927060bbcf5151a361688bbe12f0a9484643e0214cbb936d17224041e8b1f44",
+    "scripts/updates.py": "68eaccb8720fbffe81e017bacd0d552ceb16fa741951723856524cb22acfc77e",
+    "scripts/scoring.py": "9f023b80552bc9f11f259f73f4f9e7f4f0af3b73eae82438cb15fea5f0725300",
+    "scripts/build_release.py": "5de1c5d9f16d58cd3fb317da46ce3697c53def179a35dcb35c51354d977a7b03",
+    "scripts/common.py": "157fbb12c16ba7aca16a02c53cc0a34b1cec3b8025dea81db198ba7bcbe244b0",
+    "scripts/workflow.py": "a6cf8da133714ae286d61eea81979d52335cfb7946300a40a5222389c42e4d1c",
+    "scripts/router.py": "c0c874c631945d37ca36f1e370d4278a9f76e06e448942b0443294c68d518792",
+    "references/topic-feature-schema.md": "a0d43a5ae380ee9f72a2e4378ced0fe47aa82f218a86178c6ee83a739810f8e0",
+    "references/feedback-contract.md": "ef372d903de7e3ae53bc5618db69471a752ce19c247f872d12923a3afc7a7f25",
+    "agents/openai.yaml": "174554e2f8a32bbaa6c8712cd50999abf723ba4a92308004dc24eeff7d563033",
+    "tests/test_v2.py": "a6cf860df718d9ee5136e7af54057e622ddc6dca7a6c44acb27a34737275e4c9"
+  }
+}
